@@ -1,8 +1,21 @@
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json',
+  };
+
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405, headers: corsHeaders
+    });
   }
 
   try {
@@ -14,7 +27,7 @@ export default async function handler(req) {
     }));
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-06-17:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -30,20 +43,16 @@ export default async function handler(req) {
 
     if (data.error) {
       return new Response(JSON.stringify({ error: data.error.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        status: 500, headers: corsHeaders
       });
     }
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '응답을 받지 못했어요.';
-    return new Response(JSON.stringify({ text }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(JSON.stringify({ text }), { headers: corsHeaders });
 
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      status: 500, headers: corsHeaders
     });
   }
 }
